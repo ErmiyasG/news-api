@@ -43,6 +43,8 @@ public class AuthService {
 
         userRepository.save(user);
 
+        System.out.println("Saved User ID = " + user.getId());
+
         return ApiResponse.builder()
                 .success(true)
                 .message("User registered")
