@@ -1,0 +1,17 @@
+server:
+  port: 8070
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/news_api
+    username: psqluser
+    password: psqluser
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+
+jwt:
+  secret: VERY_SECRET_KEY_CHANGE_THIS
+  expiration: 86400000
