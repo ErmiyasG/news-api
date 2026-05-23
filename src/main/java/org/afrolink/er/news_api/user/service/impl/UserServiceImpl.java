@@ -56,4 +56,17 @@ public class UserServiceImpl implements UserService {
 
         return user;
     }
+
+    @Override
+    public User validateAuthor(UUID id) {
+
+        User user = findById(id);
+
+        if (user.getRole() != Role.AUTHOR) {
+            throw new RuntimeException(
+                    "Only authors can perform this action");
+        }
+
+        return user;
+    }
 }

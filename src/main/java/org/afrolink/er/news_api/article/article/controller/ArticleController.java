@@ -1,8 +1,5 @@
 package org.afrolink.er.news_api.article.article.controller;
 
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
 import lombok.RequiredArgsConstructor;
 
 import org.afrolink.er.news_api.article.article.ArticleService;
@@ -111,5 +108,27 @@ public class ArticleController {
                 authorId);
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<?>> getArticle(
+            @PathVariable UUID id,
+            Authentication authentication) {
+
+        UUID readerId = null;
+
+        if (authentication != null) {
+
+            try {
+                readerId = UUID.fromString(
+                        authentication.getName());
+            } catch (Exception ignored) {
+            }
+        }
+
+        return ResponseEntity.ok(
+                articleService.getArticle(
+                        id,
+                        readerId));
     }
 }

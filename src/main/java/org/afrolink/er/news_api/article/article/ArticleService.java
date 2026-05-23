@@ -1,23 +1,22 @@
 package org.afrolink.er.news_api.article.article;
 
-import org.afrolink.er.news_api.common.response.ApiResponse;
-import org.springframework.stereotype.Service;
+import java.util.UUID;
 
-import lombok.RequiredArgsConstructor;
-
-import org.afrolink.er.news_api.article.dto.*;
+import org.afrolink.er.news_api.article.dto.CreateArticleRequest;
+import org.afrolink.er.news_api.article.dto.UpdateArticleRequest;
 import org.afrolink.er.news_api.article.entity.Article;
 import org.afrolink.er.news_api.article.entity.ArticleStatus;
 import org.afrolink.er.news_api.article.repository.ArticleRepository;
 import org.afrolink.er.news_api.common.response.ApiResponse;
+import org.afrolink.er.news_api.readlog.service.ReadLogService;
 import org.afrolink.er.news_api.user.entity.User;
 import org.afrolink.er.news_api.user.service.UserService;
-import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -25,7 +24,7 @@ public class ArticleService {
 
     private final ArticleRepository articleRepository;
     private final UserService userService;
-    // private final ReadLogService readLogService;
+    private final ReadLogService readLogService;
 
     @Transactional
     public ApiResponse<?> createArticle(
@@ -34,16 +33,16 @@ public class ArticleService {
 
         User author = userService.validateAuthor(authorId);
 
-        Article article = Article.builder()
-                .title(request.getTitle())
-                .content(request.getContent())
-                .category(request.getCategory())
-                .status(
-                        request.getStatus() == null
-                                ? ArticleStatus.DRAFT
-                                : request.getStatus())
-                .author(author)
-                .build();
+        Article article = new Article();
+
+        article.setTitle(request.getTitle());
+        article.setContent(request.getContent());
+        article.setCategory(request.getCategory());
+        article.setStatus(
+                request.getStatus() == null
+                        ? ArticleStatus.DRAFT
+                        : request.getStatus());
+        article.setAuthor(author);
 
         Article savedArticle = articleRepository.save(article);
 
@@ -61,33 +60,32 @@ public class ArticleService {
             UpdateArticleRequest request) {
 
         Article article = articleRepository.findById(articleId)
-                .orElseThrow(() -> new RuntimeException(
-                        "Article not found"));
+                .orElseThrow(() -> new RuntimeException("Article not found"));
 
-        if (!article.getAuthor()
-                .getId()
-                .equals(authorId)) {
+        validateOwnership(article, authorId);
 
-            return ApiResponse.builder()
-                    .success(false)
-                    .message("Forbidden")
-                    .build();
+        if (request.getTitle() != null) {
+            article.setTitle(request.getTitle());
         }
 
-        article.setTitle(request.getTitle());
-        article.setContent(request.getContent());
-        article.setCategory(request.getCategory());
+        if (request.getContent() != null) {
+            article.setContent(request.getContent());
+        }
+
+        if (request.getCategory() != null) {
+            article.setCategory(request.getCategory());
+        }
 
         if (request.getStatus() != null) {
             article.setStatus(request.getStatus());
         }
 
-        articleRepository.save(article);
+        Article updatedArticle = articleRepository.save(article);
 
         return ApiResponse.builder()
                 .success(true)
                 .message("Article updated successfully")
-                .object(article)
+                .object(updatedArticle)
                 .build();
     }
 
@@ -97,18 +95,9 @@ public class ArticleService {
             UUID authorId) {
 
         Article article = articleRepository.findById(articleId)
-                .orElseThrow(() -> new RuntimeException(
-                        "Article not found"));
+                .orElseThrow(() -> new RuntimeException("Article not found"));
 
-        if (!article.getAuthor()
-                .getId()
-                .equals(authorId)) {
-
-            return ApiResponse.builder()
-                    .success(false)
-                    .message("Forbidden")
-                    .build();
-        }
+        validateOwnership(article, authorId);
 
         articleRepository.delete(article);
 
@@ -129,7 +118,7 @@ public class ArticleService {
 
         return ApiResponse.builder()
                 .success(true)
-                .message("Articles fetched")
+                .message("Articles fetched successfully")
                 .object(articles)
                 .build();
     }
@@ -139,8 +128,7 @@ public class ArticleService {
             UUID readerId) {
 
         Article article = articleRepository.findById(articleId)
-                .orElseThrow(() -> new RuntimeException(
-                        "Article not found"));
+                .orElseThrow(() -> new RuntimeException("Article not found"));
 
         readLogService.logRead(
                 article.getId(),
@@ -148,7 +136,7 @@ public class ArticleService {
 
         return ApiResponse.builder()
                 .success(true)
-                .message("Article fetched")
+                .message("Article fetched successfully")
                 .object(article)
                 .build();
     }
@@ -163,8 +151,21 @@ public class ArticleService {
 
         return ApiResponse.builder()
                 .success(true)
-                .message("Published articles")
+                .message("Published articles fetched successfully")
                 .object(articles)
                 .build();
+    }
+
+    private void validateOwnership(
+            Article article,
+            UUID authorId) {
+
+        if (!article.getAuthor()
+                .getId()
+                .equals(authorId)) {
+
+            throw new RuntimeException(
+                    "You are not allowed to modify this article");
+        }
     }
 }
