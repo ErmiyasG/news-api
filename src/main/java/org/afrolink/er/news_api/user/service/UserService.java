@@ -14,4 +14,6 @@ public interface UserService {
     User getAuthor(UUID id);
 
     User getReader(UUID id);
+
+    User validateAuthor(UUID id);
 }
